@@ -1,98 +1,54 @@
-import 'package:bloc_pattern_full/counter_bloc.dart';
+import 'package:bloc_pattern_full/pages/home_page.dart';
+import 'package:bloc_pattern_full/pages/login_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-import 'counter_event.dart';
-import 'couter_state.dart';
+import 'blocs/authentication/authentication_bloc.dart';
+import 'blocs/authentication/authentication_event.dart';
+import 'blocs/authentication/authetnication_state.dart';
+import 'services/services.dart';
 
-void main() {
-  runApp(MyApp());
-}
+final storage = FlutterSecureStorage();
+
+void main() => runApp(
+        // Injects the Authentication service
+        RepositoryProvider<AuthenticationService>(
+      create: (context) {
+        return FakeAuthenticationService();
+      },
+      // Injects the Authentication BLoC
+      child: BlocProvider<AuthenticationBloc>(
+        create: (context) {
+          final authService =
+              RepositoryProvider.of<AuthenticationService>(context);
+          return AuthenticationBloc(authService)..add(AppLoaded());
+        },
+        child: MyApp(),
+      ),
+    ));
 
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Authentication Demo',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
+        primarySwatch: Colors.teal,
       ),
-      home: MyHomePage(title: 'Flutter Demo Home Page'),
-    );
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-  MyHomePage({Key key, this.title}) : super(key: key);
-
-  final String title;
-
-  @override
-  _MyHomePageState createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  @override
-  Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => CounterBloc(),
-      child: CounterWidget(
-        widget: widget,
-      ),
-    );
-  }
-}
-
-class CounterWidget extends StatelessWidget {
-  const CounterWidget({
-    Key key,
-    @required this.widget,
-  }) : super(key: key);
-
-  final MyHomePage widget;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-      ),
-      body: BlocBuilder<CounterBloc, CounterState>(
-          bloc: BlocProvider.of<CounterBloc>(context),
-          builder: (context, CounterState state) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  Text(
-                    'You have pushed the button this many times:',
-                  ),
-                  Text(
-                    state.counter.toString(),
-                    style: TextStyle(fontSize: 60),
-                  )
-                ],
-              ),
+      // BlocBuilder will listen to changes in AuthenticationState
+      // and build an appropriate widget based on the state.
+      home: BlocBuilder<AuthenticationBloc, AuthenticationState>(
+        builder: (context, state) {
+          if (state is AuthenticationAuthenticated) {
+            // show home page
+            return HomePage(
+              user: state.user,
             );
-          }),
-      floatingActionButton: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: <Widget>[
-          FloatingActionButton(
-            onPressed: () =>
-                BlocProvider.of<CounterBloc>(context).add(IncrementEvent()),
-            tooltip: 'Increment',
-            child: Icon(Icons.add),
-          ),
-          SizedBox(width: 20),
-          FloatingActionButton(
-            onPressed: () =>
-                BlocProvider.of<CounterBloc>(context).add(DecrementEvent()),
-            tooltip: '_decrementCounter',
-            child: Icon(Icons.remove),
-          )
-        ],
+          }
+          // otherwise show login page
+          return LoginPage();
+        },
       ),
     );
   }
